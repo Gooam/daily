@@ -1,0 +1,504 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>수입일계표</title>
+  <style>
+    :root {
+      --bg: #f1f5f9;
+      --card: #ffffff;
+      --primary: #0f172a;
+      --gold-bg: #fefce8;
+      --gold-border: #fde047;
+      --gold-text: #854d0e;
+      --cash-bg: #f0fdf4;
+      --cash-border: #86efac;
+      --cash-text: #166534;
+      --border: #cbd5e1;
+      --blue: #2563eb;
+      --red: #dc2626;
+    }
+    * { box-sizing: border-box; font-family: -apple-system, BlinkMacSystemFont, "Malgun Gothic", sans-serif; }
+    body { margin: 0; padding: 8px; background: var(--bg); color: #1e293b; }
+    .container { max-width: 500px; margin: 0 auto; padding-bottom: 40px; }
+
+    /* 상단 월 및 날짜 선택 바 */
+    .header-bar {
+      background: var(--primary); color: #fff; padding: 10px 12px;
+      border-radius: 12px; display: flex; justify-content: space-between;
+      align-items: center; gap: 6px; margin-bottom: 10px;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.15);
+    }
+    .month-select, .date-select {
+      flex: 1; padding: 8px 6px; font-size: 15px; font-weight: 800;
+      border-radius: 8px; border: none; background: #fff; color: #0f172a; text-align: center;
+    }
+    .btn {
+      padding: 8px 10px; border-radius: 8px; border: none;
+      font-weight: 800; font-size: 13px; cursor: pointer; white-space: nowrap;
+    }
+    .btn-add { background: #3b82f6; color: #fff; }
+    .btn-del { background: #ef4444; color: #fff; }
+
+    /* 날짜 선택 달력 팝업 */
+    .modal-bg {
+      display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+      background: rgba(0,0,0,0.5); z-index: 100; align-items: center; justify-content: center;
+    }
+    .modal-box {
+      background: #fff; padding: 20px; border-radius: 14px; width: 88%; max-width: 340px;
+      text-align: center; box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+    }
+    .modal-box h3 { margin: 0 0 12px; font-size: 17px; }
+    .modal-box input[type="date"] {
+      width: 100%; padding: 10px; font-size: 17px; font-weight: 700;
+      border: 2px solid #cbd5e1; border-radius: 8px; margin-bottom: 14px;
+    }
+    .modal-btns { display: flex; gap: 8px; }
+    .modal-btns button { flex: 1; padding: 10px; font-size: 15px; font-weight: 700; border-radius: 8px; border: none; cursor: pointer; }
+
+    /* 상단 고정 요약 전광판 */
+    .summary-card {
+      background: var(--card); border-radius: 12px; padding: 10px;
+      margin-bottom: 10px; box-shadow: 0 3px 10px rgba(0,0,0,0.08);
+      border: 2px solid #94a3b8; position: sticky; top: 4px; z-index: 10;
+    }
+    .summary-header {
+      display: flex; justify-content: space-between; align-items: center;
+      margin-bottom: 6px; font-size: 13px; font-weight: 800; color: #334155;
+    }
+
+    table { width: 100%; border-collapse: collapse; table-layout: fixed; }
+    th, td { border: 1px solid var(--border); padding: 4px 5px; text-align: center; vertical-align: middle; }
+    .col-name { width: 34%; font-weight: 800; font-size: 13px; background: #f8fafc; color: #0f172a; }
+    .col-val { width: 33%; }
+    .col-memo { width: 33%; }
+
+    .th-gold { background: var(--gold-bg); color: var(--gold-text); font-size: 13px; border-bottom: 2px solid var(--gold-border); padding: 6px 4px; }
+    .th-cash { background: var(--cash-bg); color: var(--cash-text); font-size: 13px; border-bottom: 2px solid var(--cash-border); padding: 6px 4px; }
+
+    .sum-val { font-size: 15px; font-weight: 800; background: #f8fafc; text-align: right; padding-right: 8px; }
+
+    /* 입력칸 스타일 */
+    .num-input {
+      width: 100%; padding: 5px 6px; font-size: 15px; font-weight: 700;
+      text-align: right; border: 1px solid #cbd5e1; border-radius: 5px;
+      background: #fff; color: #0f172a; outline: none;
+    }
+    .num-input:focus { border: 2px solid #2563eb; background: #eff6ff; }
+    
+    .memo-input {
+      width: 100%; padding: 5px 6px; font-size: 13px; font-weight: 600;
+      text-align: left; border: 1px solid #cbd5e1; border-radius: 5px;
+      background: #fff; color: #1e293b; outline: none;
+    }
+    .memo-input:focus { border: 2px solid #2563eb; background: #eff6ff; }
+    .name-input {
+      width: 100%; padding: 4px; font-size: 13px; font-weight: 800;
+      text-align: center; border: 1px dashed #94a3b8; border-radius: 4px;
+      background: #f8fafc; color: #0f172a; outline: none;
+    }
+    .name-input:focus { background: #fff; border: 1.5px solid #2563eb; }
+
+    /* 입력 리스트 카드 */
+    .list-card {
+      background: var(--card); border-radius: 12px; padding: 10px;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.05); margin-bottom: 12px;
+    }
+    .list-title {
+      font-size: 13px; font-weight: 800; color: #475569;
+      margin-bottom: 6px; display: flex; justify-content: space-between; align-items: center;
+    }
+    .btn-reset {
+      background: #f1f5f9; border: 1px solid #cbd5e1; border-radius: 6px;
+      padding: 3px 8px; font-size: 11px; font-weight: 700; color: #64748b; cursor: pointer;
+    }
+  </style>
+</head>
+<body>
+
+<div class="container">
+  <!-- 1. 상단 월 및 날짜 선택 바 -->
+  <div class="header-bar">
+    <select id="monthSelect" class="month-select" onchange="changeMonth(this.value)"></select>
+    <select id="dateSelect" class="date-select" onchange="changeDate(this.value)"></select>
+    <button class="btn btn-add" onclick="openDateModal()">+ 날짜</button>
+    <button class="btn btn-del" onclick="deleteCurrentDate()">삭제</button>
+  </div>
+
+  <!-- 2. 상단 고정 요약 전광판 (합계 / 누적합계) -->
+  <div class="summary-card">
+    <div class="summary-header">
+      <span>📊 수입일계표 요약</span>
+      <span id="currentMonthTitle" style="color:#2563eb; font-weight:800;"></span>
+    </div>
+    <table>
+      <thead>
+        <tr>
+          <th class="col-name">구분</th>
+          <th class="col-val th-gold">🟡 당일 합계</th>
+          <th class="col-memo th-cash">💵 이번달 누적합계</th>
+        </tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td class="col-name">금 액</td>
+          <td class="sum-val" id="sumDaily">0</td>
+          <td class="sum-val" id="sumCumulative">0</td>
+        </tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- 3. 수입 항목 입력 표 -->
+  <div class="list-card">
+    <div class="list-title">
+      <span>📝 수입 항목 입력 <span style="color:#16a34a; font-weight:700;">(자동저장)</span></span>
+      <button class="btn-reset" onclick="clearCurrentInputs()">현재칸 비우기</button>
+    </div>
+    <table>
+      <thead>
+        <tr>
+          <th class="col-name">적요</th>
+          <th class="col-val th-gold">금액 (+, -)</th>
+          <th class="col-memo th-cash">비고</th>
+        </tr>
+      </thead>
+      <tbody id="itemBody"></tbody>
+    </table>
+  </div>
+</div>
+
+<!-- 날짜 선택 달력 팝업 -->
+<div class="modal-bg" id="dateModal">
+  <div class="modal-box">
+    <h3>📅 추가할 날짜 선택</h3>
+    <input type="date" id="newDateInput">
+    <div class="modal-btns">
+      <button style="background:#e2e8f0; color:#334155;" onclick="closeDateModal()">취소</button>
+      <button style="background:#2563eb; color:#fff;" onclick="confirmAddDate()">칸 생성</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  const STORAGE_KEY = "my_income_daily_ledger_v1";
+  
+  // 고정 항목 2개 + 자유 입력 칸 7개 (총 9개 행)
+  const FIXED_ITEMS = ["고금차액", "잡금차액"];
+  const CUSTOM_COUNT = 7;
+
+  let appData = {
+    currentMonth: "", // "YYYY-MM"
+    currentDate: "",  // "YYYY-MM-DD"
+    records: {}       // "YYYY-MM-DD": { customNames: {...}, items: { key: {val, memo} } }
+  };
+
+  function getTodayStr() {
+    const d = new Date();
+    const yyyy = d.getFullYear();
+    const mm = String(d.getMonth() + 1).padStart(2, '0');
+    const dd = String(d.getDate()).padStart(2, '0');
+    return `${yyyy}-${mm}-${dd}`;
+  }
+
+  function createEmptyRecord() {
+    const rec = { customNames: {}, items: {} };
+    for (let i = 1; i <= CUSTOM_COUNT; i++) {
+      rec.customNames[`custom_${i}`] = `빈칸 ${i}`;
+    }
+    FIXED_ITEMS.forEach(name => {
+      rec.items[name] = { val: "", memo: "" };
+    });
+    for (let i = 1; i <= CUSTOM_COUNT; i++) {
+      rec.items[`custom_${i}`] = { val: "", memo: "" };
+    }
+    return rec;
+  }
+
+  function loadData() {
+    const saved = localStorage.getItem(STORAGE_KEY);
+    if (saved) {
+      try { appData = JSON.parse(saved); } catch (e) {}
+    }
+    const today = getTodayStr();
+    const currentM = today.substring(0, 7);
+
+    if (!appData.records) appData.records = {};
+
+    const dates = Object.keys(appData.records).sort().reverse();
+    if (dates.length === 0) {
+      appData.records[today] = createEmptyRecord();
+      appData.currentMonth = currentM;
+      appData.currentDate = today;
+    } else {
+      if (!appData.currentDate || !appData.records[appData.currentDate]) {
+        appData.currentDate = dates[0];
+      }
+      appData.currentMonth = appData.currentDate.substring(0, 7);
+    }
+    saveData();
+  }
+
+  function saveData() {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(appData));
+  }
+
+  function parseNum(val) {
+    if (!val) return 0;
+    const cleaned = String(val).replace(/,/g, '').trim();
+    const num = parseFloat(cleaned);
+    return isNaN(num) ? 0 : num;
+  }
+
+  function formatCash(num) {
+    return Math.round(num).toLocaleString('ko-KR');
+  }
+
+  function formatInputVal(str) {
+    if (!str) return "";
+    const isMinus = str.trim().startsWith("-");
+    const raw = str.replace(/[^0-9]/g, "");
+    if (!raw) return isMinus ? "-" : "";
+    return (isMinus ? "-" : "") + Number(raw).toLocaleString('ko-KR');
+  }
+
+  function getMonthsList() {
+    const months = new Set();
+    Object.keys(appData.records).forEach(d => {
+      if (d.length >= 7) months.add(d.substring(0, 7));
+    });
+    months.add(getTodayStr().substring(0, 7));
+    return Array.from(months).sort().reverse();
+  }
+
+  function renderMonthSelect() {
+    const sel = document.getElementById("monthSelect");
+    const months = getMonthsList();
+    sel.innerHTML = "";
+    months.forEach(m => {
+      const opt = document.createElement("option");
+      opt.value = m;
+      opt.textContent = `📅 ${m} 월`;
+      if (m === appData.currentMonth) opt.selected = true;
+      sel.appendChild(opt);
+    });
+    document.getElementById("currentMonthTitle").textContent = `[ ${appData.currentMonth} ]`;
+  }
+
+  function renderDateSelect() {
+    const sel = document.getElementById("dateSelect");
+    const dates = Object.keys(appData.records)
+      .filter(d => d.startsWith(appData.currentMonth))
+      .sort()
+      .reverse();
+
+    sel.innerHTML = "";
+    if (dates.length === 0) {
+      const opt = document.createElement("option");
+      opt.value = "";
+      opt.textContent = "기록 없음";
+      sel.appendChild(opt);
+      appData.currentDate = "";
+    } else {
+      if (!dates.includes(appData.currentDate)) {
+        appData.currentDate = dates[0];
+      }
+      dates.forEach(d => {
+        const opt = document.createElement("option");
+        opt.value = d;
+        opt.textContent = d;
+        if (d === appData.currentDate) opt.selected = true;
+        sel.appendChild(opt);
+      });
+    }
+  }
+
+  function renderTable() {
+    renderMonthSelect();
+    renderDateSelect();
+
+    const tbody = document.getElementById("itemBody");
+    tbody.innerHTML = "";
+
+    if (!appData.currentDate || !appData.records[appData.currentDate]) {
+      calculateTotals();
+      return;
+    }
+
+    const rec = appData.records[appData.currentDate];
+    if (!rec.customNames) {
+      rec.customNames = {};
+      for (let i = 1; i <= CUSTOM_COUNT; i++) rec.customNames[`custom_${i}`] = `빈칸 ${i}`;
+    }
+    if (!rec.items) rec.items = {};
+
+    const allKeys = [...FIXED_ITEMS];
+    for (let i = 1; i <= CUSTOM_COUNT; i++) allKeys.push(`custom_${i}`);
+
+    allKeys.forEach(key => {
+      if (!rec.items[key]) rec.items[key] = { val: "", memo: "" };
+      const itemData = rec.items[key];
+      const isCustom = key.startsWith("custom_");
+      const displayName = isCustom ? (rec.customNames[key] || key) : key;
+
+      const tr = document.createElement("tr");
+      
+      let nameHtml = "";
+      if (isCustom) {
+        nameHtml = `<input type="text" class="name-input" value="${displayName}" oninput="onNameInput('${key}', this)">`;
+      } else {
+        nameHtml = `<span style="font-size:13px; font-weight:800; color:#0f172a;">${displayName}</span>`;
+      }
+
+      tr.innerHTML = `
+        <td class="col-name">${nameHtml}</td>
+        <td>
+          <input type="text" inputmode="numeric" class="num-input"
+            value="${formatInputVal(String(itemData.val))}" placeholder="0"
+            oninput="onItemInput('${key}', 'val', this)">
+        </td>
+        <td>
+          <input type="text" class="memo-input"
+            value="${itemData.memo || ''}" placeholder="비고 입력"
+            oninput="onItemInput('${key}', 'memo', this)">
+        </td>
+      `;
+      tbody.appendChild(tr);
+    });
+
+    calculateTotals();
+  }
+
+  function onNameInput(key, el) {
+    const rec = appData.records[appData.currentDate];
+    if (rec && rec.customNames) {
+      rec.customNames[key] = el.value;
+      saveData();
+    }
+  }
+
+  function onItemInput(key, type, el) {
+    const rec = appData.records[appData.currentDate];
+    if (!rec || !rec.items[key]) return;
+
+    if (type === 'val') {
+      const formatted = formatInputVal(el.value);
+      el.value = formatted;
+      rec.items[key].val = formatted.replace(/,/g, '');
+    } else {
+      rec.items[key].memo = el.value;
+    }
+    saveData();
+    calculateTotals();
+  }
+
+  function calculateTotals() {
+    let dailySum = 0;
+    let cumulativeSum = 0;
+
+    // 1. 당일 합계 (현재 선택된 날짜)
+    if (appData.currentDate && appData.records[appData.currentDate]) {
+      const rec = appData.records[appData.currentDate];
+      if (rec.items) {
+        Object.keys(rec.items).forEach(key => {
+          dailySum += parseNum(rec.items[key].val);
+        });
+      }
+    }
+
+    // 2. 누적 합계 (현재 선택된 달의 모든 날짜 합산)
+    if (appData.currentMonth) {
+      Object.keys(appData.records).forEach(d => {
+        if (d.startsWith(appData.currentMonth)) {
+          const r = appData.records[d];
+          if (r && r.items) {
+            Object.keys(r.items).forEach(key => {
+              cumulativeSum += parseNum(r.items[key].val);
+            });
+          }
+        }
+      });
+    }
+
+    document.getElementById("sumDaily").textContent = formatCash(dailySum);
+    document.getElementById("sumCumulative").textContent = formatCash(cumulativeSum);
+  }
+
+  function changeMonth(m) {
+    appData.currentMonth = m;
+    const dates = Object.keys(appData.records)
+      .filter(d => d.startsWith(m))
+      .sort()
+      .reverse();
+    
+    if (dates.length > 0) {
+      appData.currentDate = dates[0];
+    } else {
+      appData.currentDate = "";
+    }
+    saveData();
+    renderTable();
+  }
+
+  function changeDate(d) {
+    if (!d) return;
+    appData.currentDate = d;
+    saveData();
+    renderTable();
+  }
+
+  function openDateModal() {
+    document.getElementById("newDateInput").value = getTodayStr();
+    document.getElementById("dateModal").style.display = "flex";
+  }
+
+  function closeDateModal() {
+    document.getElementById("dateModal").style.display = "none";
+  }
+
+  function confirmAddDate() {
+    const d = document.getElementById("newDateInput").value;
+    if (!d) return;
+    if (!appData.records[d]) {
+      appData.records[d] = createEmptyRecord();
+    }
+    appData.currentMonth = d.substring(0, 7);
+    appData.currentDate = d;
+    saveData();
+    renderTable();
+    closeDateModal();
+  }
+
+  function clearCurrentInputs() {
+    if (!appData.currentDate) return;
+    if (!confirm(`[${appData.currentDate}] 날짜의 입력된 내용을 모두 비우시겠습니까?`)) return;
+    appData.records[appData.currentDate] = createEmptyRecord();
+    saveData();
+    renderTable();
+  }
+
+  function deleteCurrentDate() {
+    if (!appData.currentDate) return;
+    if (!confirm(`[${appData.currentDate}] 날짜 기록을 삭제하시겠습니까?`)) return;
+    delete appData.records[appData.currentDate];
+    const dates = Object.keys(appData.records).sort().reverse();
+    if (dates.length > 0) {
+      appData.currentDate = dates[0];
+      appData.currentMonth = dates[0].substring(0, 7);
+    } else {
+      const today = getTodayStr();
+      appData.records[today] = createEmptyRecord();
+      appData.currentMonth = today.substring(0, 7);
+      appData.currentDate = today;
+    }
+    saveData();
+    renderTable();
+  }
+
+  loadData();
+  renderTable();
+</script>
+</body>
+</html>
