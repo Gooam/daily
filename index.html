@@ -96,10 +96,10 @@
     .memo-input:focus { border: 2px solid #2563eb; background: #eff6ff; }
     .name-input {
       width: 100%; padding: 4px; font-size: 13px; font-weight: 800;
-      text-align: center; border: 1px dashed #94a3b8; border-radius: 4px;
-      background: #f8fafc; color: #0f172a; outline: none;
+      text-align: center; border: 1.5px dashed #3b82f6; border-radius: 4px;
+      background: #eff6ff; color: #1e3a8a; outline: none;
     }
-    .name-input:focus { background: #fff; border: 1.5px solid #2563eb; }
+    .name-input:focus { background: #fff; border: 2px solid #2563eb; }
 
     /* 입력 리스트 카드 */
     .list-card {
@@ -185,14 +185,13 @@
 <script>
   const STORAGE_KEY = "my_income_daily_ledger_v1";
   
-  // 고정 항목 2개 + 자유 입력 칸 7개 (총 9개 행)
   const FIXED_ITEMS = ["고금차액", "잡금차액"];
   const CUSTOM_COUNT = 7;
 
   let appData = {
-    currentMonth: "", // "YYYY-MM"
-    currentDate: "",  // "YYYY-MM-DD"
-    records: {}       // "YYYY-MM-DD": { customNames: {...}, items: { key: {val, memo} } }
+    currentMonth: "",
+    currentDate: "",
+    records: {}
   };
 
   function getTodayStr() {
@@ -347,7 +346,7 @@
       
       let nameHtml = "";
       if (isCustom) {
-        nameHtml = `<input type="text" class="name-input" value="${displayName}" oninput="onNameInput('${key}', this)">`;
+        nameHtml = `<input type="text" class="name-input" value="${displayName}" onfocus="if(this.value.startsWith('빈칸')) this.value='';" oninput="onNameInput('${key}', this)">`;
       } else {
         nameHtml = `<span style="font-size:13px; font-weight:800; color:#0f172a;">${displayName}</span>`;
       }
@@ -398,7 +397,6 @@
     let dailySum = 0;
     let cumulativeSum = 0;
 
-    // 1. 당일 합계 (현재 선택된 날짜)
     if (appData.currentDate && appData.records[appData.currentDate]) {
       const rec = appData.records[appData.currentDate];
       if (rec.items) {
@@ -408,7 +406,6 @@
       }
     }
 
-    // 2. 누적 합계 (현재 선택된 달의 모든 날짜 합산)
     if (appData.currentMonth) {
       Object.keys(appData.records).forEach(d => {
         if (d.startsWith(appData.currentMonth)) {
